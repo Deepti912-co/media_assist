@@ -2,14 +2,19 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AnalysisOutput, PatientProfile, VoiceClassification } from "../types";
 
 const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY) as string;
+const missingApiKeyError = "Missing Gemini API key. Set VITE_GEMINI_API_KEY (or GEMINI_API_KEY).";
 
-if (!apiKey) {
-  throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY (or GEMINI_API_KEY).");
-}
+export const hasGeminiApiKey = Boolean(apiKey);
 
-const ai = new GoogleGenAI({ apiKey });
+const getClient = () => {
+  if (!apiKey) {
+    throw new Error(missingApiKeyError);
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export async function classifyIntent(userInput: string): Promise<VoiceClassification> {
+  const ai = getClient();
   const prompt = `
     TASK
     You are an intent classifier for a voice medical assistant. Given the user's spoken input (transcribed to text), return ONLY a JSON object with two fields: "intent" and "urgency". Nothing else. No explanation. No preamble.
@@ -58,6 +63,7 @@ export async function analyzeMedicalData(
   profile: PatientProfile,
   deviceData?: string
 ): Promise<AnalysisOutput> {
+  const ai = getClient();
   const prompt = `
     You are MediAssist, an expert AI medical assistant. 
     Analyze the following data following your systematic 6-layer protocol:
@@ -168,6 +174,7 @@ export async function generateVoiceResponse(
   currentAnalysis?: AnalysisOutput | null,
   history: { role: 'user' | 'model', content: string }[] = []
 ): Promise<string> {
+  const ai = getClient();
   const systemInstruction = `
     You are MediAssist, an expert voice-first AI medical assistant. 
     You are designed to feel like talking to a knowledgeable, empathetic health companion.
@@ -209,6 +216,7 @@ export async function generateVoiceResponse(
 }
 
 export async function generateSpeech(text: string): Promise<string> {
+  const ai = getClient();
   const response = await ai.models.generateContent({
     model: "gemini-3.1-flash-tts-preview",
     contents: [{ parts: [{ text: `Read this with an empathetic, calm medical professional voice: ${text}` }] }],

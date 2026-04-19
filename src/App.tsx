@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { cn } from './lib/utils';
-import { analyzeMedicalData, generateVoiceResponse, generateSpeech, classifyIntent } from './services/geminiService';
+import { analyzeMedicalData, generateVoiceResponse, classifyIntent, hasGeminiApiKey } from './services/geminiService';
 import { 
   AnalysisOutput, 
   PatientProfile, 
@@ -73,6 +73,7 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
 // --- Main App ---
 
 export default function App() {
+  const geminiUnavailable = !hasGeminiApiKey;
   const [view, setView] = useState<'input' | 'analysis' | 'landing' | 'voice'>('landing');
   const [loading, setLoading] = useState(false);
   const [reportText, setReportText] = useState('');
@@ -138,6 +139,10 @@ export default function App() {
 
   const handleVoiceInput = async (input: string) => {
     if (!input.trim()) return;
+    if (geminiUnavailable) {
+      alert('Missing Gemini API key. Add VITE_GEMINI_API_KEY to your environment.');
+      return;
+    }
     
     const newHistory = [...voiceHistory, { role: 'user' as const, content: input }];
     setVoiceHistory(newHistory);
@@ -167,6 +172,10 @@ export default function App() {
   };
 
   const toggleListening = () => {
+    if (geminiUnavailable) {
+      alert('Missing Gemini API key. Add VITE_GEMINI_API_KEY to your environment.');
+      return;
+    }
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -196,6 +205,10 @@ export default function App() {
   });
 
   const handleAnalyze = async () => {
+    if (geminiUnavailable) {
+      alert('Missing Gemini API key. Add VITE_GEMINI_API_KEY to your environment.');
+      return;
+    }
     setLoading(true);
     try {
       const result = await analyzeMedicalData(reportText, symptoms, profile);
@@ -295,6 +308,16 @@ export default function App() {
         </header>
 
         <main className="flex-1 overflow-y-auto">
+          {geminiUnavailable && (
+            <div className="mx-8 mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <p className="text-sm font-medium">
+                  Gemini API key is missing. Set <code>VITE_GEMINI_API_KEY</code> in your environment and redeploy to enable analysis and voice features.
+                </p>
+              </div>
+            </div>
+          )}
           <div className={cn("p-8", view === 'landing' ? "max-w-7xl mx-auto" : "")}>
             <AnimatePresence mode="wait">
           {view === 'landing' && (
@@ -318,13 +341,15 @@ export default function App() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button 
                   onClick={() => setView('input')}
-                  className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                  disabled={geminiUnavailable}
+                  className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   Start Analysis <ArrowRight size={20} />
                 </button>
                 <button 
                   onClick={() => setView('voice')}
-                  className="w-full sm:w-auto px-8 py-4 bg-white border border-brand-primary text-brand-primary rounded-2xl font-semibold hover:bg-teal-50 transition-all flex items-center justify-center gap-2"
+                  disabled={geminiUnavailable}
+                  className="w-full sm:w-auto px-8 py-4 bg-white border border-brand-primary text-brand-primary rounded-2xl font-semibold hover:bg-teal-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Mic size={20} />
                   Talk to MediAssist AI
@@ -371,11 +396,11 @@ export default function App() {
                   </AnimatePresence>
                   <button 
                     onClick={toggleListening}
-                    disabled={loading || isPlaying}
+                    disabled={geminiUnavailable || loading || isPlaying}
                     className={cn(
                       "relative w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-2xl",
                       isListening ? "bg-red-500 scale-110" : "bg-brand-primary hover:scale-105",
-                      (loading || isPlaying) && "opacity-50 cursor-not-allowed"
+                      (geminiUnavailable || loading || isPlaying) && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     {isListening ? <Square size={48} className="text-white fill-white" /> : <Mic size={48} className="text-white" />}
@@ -608,7 +633,7 @@ export default function App() {
                   </Card>
 
                   <button 
-                    disabled={loading || (!reportText && !symptoms)}
+                    disabled={geminiUnavailable || loading || (!reportText && !symptoms)}
                     onClick={handleAnalyze}
                     className="w-full py-5 bg-brand-primary text-white rounded-2xl font-bold shadow-xl shadow-teal-100 hover:bg-brand-dark disabled:opacity-50 disabled:hover:translate-y-0 hover:-translate-y-1 transition-all flex items-center justify-center gap-3"
                   >
