@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AnalysisOutput, PatientProfile, VoiceClassification } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY) as string;
+
+if (!apiKey) {
+  throw new Error("Missing Gemini API key. Set VITE_GEMINI_API_KEY (or GEMINI_API_KEY).");
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 export async function classifyIntent(userInput: string): Promise<VoiceClassification> {
   const prompt = `
