@@ -324,10 +324,10 @@ export default function App() {
                   <Brain size={14} />
                   <span>Powered by Clinical AI</span>
                 </div>
-                <h1 className="font-serif text-5xl md:text-7xl font-normal text-text-bold mb-6 leading-[1.1]">
-                  Understand your health in <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-dark">plain language.</span>
+                <h1 className="font-sans font-bold text-[clamp(44px,6.5vw,80px)] tracking-[-1.5px] leading-[1.05] text-[#0D2B28] mb-6">
+                  Understand your health in <span className="text-[#00897B]">plain language.</span>
                 </h1>
-                <p className="text-xl font-light text-text-main mb-10 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-[17px] font-[300] text-[#3D5C57] mb-10 max-w-[480px] mx-auto leading-[1.65]">
                   Expert medical analysis for reports, symptoms, and wearable data. Empathetic, accurate, and always ready to help you navigate your wellness journey.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
