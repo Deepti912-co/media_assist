@@ -13,7 +13,46 @@ const getClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+const emergencyKeywords = [
+  "chest pain",
+  "heart attack",
+  "can't breathe",
+  "difficulty breathing",
+  "unconscious",
+  "not responding",
+  "stroke",
+  "severe bleeding",
+  "overdose",
+  "poisoning",
+  "suicidal",
+  "want to die",
+  "end my life",
+  "severe chest tightness",
+  "collapsed",
+  "seizure",
+  "fits"
+];
+
+const hasEmergencySignal = (input: string) =>
+  emergencyKeywords.some((keyword) => input.toLowerCase().includes(keyword));
+
 export async function classifyIntent(userInput: string): Promise<VoiceClassification> {
+  if (!hasGeminiApiKey) {
+    if (hasEmergencySignal(userInput)) {
+      return { intent: "EMERGENCY", urgency: "critical" };
+    }
+    if (/medicine|medication|drug|dose|tablet|pill/i.test(userInput)) {
+      return { intent: "MEDICATION_QUESTION", urgency: "normal" };
+    }
+    if (/report|lab|test|blood|result|scan/i.test(userInput)) {
+      return { intent: "REPORT_QUERY", urgency: "normal" };
+    }
+    if (/pain|fever|cough|headache|fatigue|symptom|nausea|dizzy/i.test(userInput)) {
+      return { intent: "SYMPTOM_INPUT", urgency: "normal" };
+    }
+    return { intent: "FOLLOW_UP", urgency: "normal" };
+  }
+
   const ai = getClient();
   const prompt = `
     TASK
@@ -63,6 +102,75 @@ export async function analyzeMedicalData(
   profile: PatientProfile,
   deviceData?: string
 ): Promise<AnalysisOutput> {
+  if (!hasGeminiApiKey) {
+    const hasKidneySignal = /creatinine/i.test(reportText);
+    const hasGlucoseSignal = /glucose|sugar|hba1c/i.test(`${reportText} ${symptoms}`);
+
+    return {
+      summary: "Demo analysis mode is active because the Gemini API key is not configured. I reviewed your symptoms and report text using built-in rules and highlighted possible follow-up areas.",
+      findings: [
+        ...(hasKidneySignal
+          ? [{
+              test: "Creatinine",
+              value: "Mildly elevated",
+              unit: "mg/dL",
+              referenceRange: "0.6 - 1.3",
+              status: "HIGH" as const,
+              meaning: "Can suggest dehydration or reduced kidney filtration. Please review with your clinician."
+            }]
+          : []),
+        ...(hasGlucoseSignal
+          ? [{
+              test: "Glucose trend",
+              value: "Borderline pattern",
+              unit: "mg/dL",
+              referenceRange: "70 - 99 fasting",
+              status: "BORDERLINE" as const,
+              meaning: "Could indicate early glucose regulation issues and should be rechecked."
+            }]
+          : []),
+        {
+          test: "Symptom review",
+          value: symptoms ? "Symptoms captured" : "No symptoms entered",
+          unit: "-",
+          referenceRange: "-",
+          status: symptoms ? "BORDERLINE" : "NORMAL",
+          meaning: symptoms
+            ? "Symptoms were considered in this rules-based summary."
+            : "Add symptoms to improve the quality of the demo analysis."
+        }
+      ],
+      flags: hasKidneySignal || hasGlucoseSignal
+        ? [{
+            test: "Follow-up recommended",
+            status: "BORDERLINE",
+            explanation: "Potential kidney and/or glucose markers were detected from your provided text."
+          }]
+        : [],
+      trends: "No longitudinal trend data available in demo mode.",
+      diagnoses: [{
+        condition: "Needs clinician follow-up",
+        likelihood: "Moderate",
+        supportingEvidence: "Rule-based findings from provided report and symptoms.",
+        ruledOut: "A formal diagnosis cannot be made in demo mode.",
+        urgentReferral: false
+      }],
+      medNotes: [{
+        medication: profile.medications || "No medication list provided",
+        severity: "MILD",
+        note: "Medication interaction checking is limited in demo mode."
+      }],
+      nextSteps: [
+        { urgency: "Routine", action: "Book a routine consultation to review lab markers and symptoms." },
+        { urgency: "Lifestyle", action: "Hydrate, monitor symptoms, and keep a record of changes for your clinician." }
+      ],
+      specialist: {
+        type: "Primary Care",
+        reason: "Initial review of reported findings and symptom timeline."
+      }
+    };
+  }
+
   const ai = getClient();
   const prompt = `
     You are MediAssist, an expert AI medical assistant. 
@@ -174,6 +282,14 @@ export async function generateVoiceResponse(
   currentAnalysis?: AnalysisOutput | null,
   history: { role: 'user' | 'model', content: string }[] = []
 ): Promise<string> {
+  if (!hasGeminiApiKey) {
+    if (hasEmergencySignal(userInput)) {
+      return "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
+    }
+
+    return "I’m running in demo mode right now because the Gemini key is missing, but I can still help with general guidance. Based on what you shared, keep tracking your symptoms and arrange a routine medical review so a clinician can interpret your findings safely. If your symptoms suddenly worsen, seek urgent care immediately. Please remember, this is for your information only — your doctor is the right person to advise on next steps.";
+  }
+
   const ai = getClient();
   const systemInstruction = `
     You are MediAssist, an expert voice-first AI medical assistant. 
