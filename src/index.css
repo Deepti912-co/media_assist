@@ -22,3 +22,60 @@
     @apply bg-bg-base text-text-main font-sans;
   }
 }
+
+@layer components {
+  .hero-section-bg {
+    background-color: #F0F4F4;
+    background-image:
+      radial-gradient(circle at top left, rgba(0, 191, 165, 0.10) 0%, transparent 42%),
+      radial-gradient(circle at bottom right, rgba(0, 137, 123, 0.08) 0%, transparent 46%),
+      radial-gradient(circle at center, rgba(0, 191, 165, 0.06) 0%, transparent 54%),
+      radial-gradient(circle, rgba(0, 137, 123, 0.07) 1px, transparent 1.5px);
+    background-size: auto, auto, auto, 36px 36px;
+    background-position: top left, bottom right, center, 0 0;
+  }
+
+  .hero-float {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(70px);
+    animation: heroFloat 8s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  .hero-float-1 {
+    width: 18rem;
+    height: 18rem;
+    top: 8%;
+    left: -5%;
+    background: rgba(0, 191, 165, 0.25);
+  }
+
+  .hero-float-2 {
+    width: 22rem;
+    height: 22rem;
+    right: -8%;
+    bottom: -10%;
+    background: rgba(0, 137, 123, 0.20);
+    animation-delay: -2.5s;
+  }
+
+  .hero-float-3 {
+    width: 16rem;
+    height: 16rem;
+    top: 38%;
+    left: 42%;
+    background: rgba(13, 148, 136, 0.18);
+    animation-delay: -1.2s;
+  }
+}
+
+@keyframes heroFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}

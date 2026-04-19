@@ -309,55 +309,60 @@ export default function App() {
           <div className={cn("p-8", view === 'landing' ? "max-w-7xl mx-auto" : "")}>
             <AnimatePresence mode="wait">
           {view === 'landing' && (
-            <motion.div 
+            <motion.section
               key="landing"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="max-w-4xl mx-auto text-center py-20"
+              className="hero-section-bg relative overflow-hidden rounded-3xl px-6 py-20 md:px-10"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-brand-primary text-xs font-semibold mb-6 border border-teal-100">
-                <Brain size={14} />
-                <span>Powered by Clinical AI</span>
-              </div>
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-bold mb-6 leading-[1.1]">
-                Understand your health in <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-dark">plain language.</span>
-              </h1>
-              <p className="text-xl text-text-main mb-10 max-w-2xl mx-auto leading-relaxed">
-                Expert medical analysis for reports, symptoms, and wearable data. Empathetic, accurate, and always ready to help you navigate your wellness journey.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button 
-                  onClick={() => setView('input')}
-                  className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                >
-                  Start Analysis <ArrowRight size={20} />
-                </button>
-                <button 
-                  onClick={() => setView('voice')}
-                  className="w-full sm:w-auto px-8 py-4 bg-white border border-brand-primary text-brand-primary rounded-2xl font-semibold hover:bg-teal-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Mic size={20} />
-                  Talk to MediAssist AI
-                </button>
-              </div>
+              <div className="hero-float hero-float-1" />
+              <div className="hero-float hero-float-2" />
+              <div className="hero-float hero-float-3" />
+              <div className="relative z-10 max-w-4xl mx-auto text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-brand-primary text-xs font-semibold mb-6 border border-teal-100">
+                  <Brain size={14} />
+                  <span>Powered by Clinical AI</span>
+                </div>
+                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-bold mb-6 leading-[1.1]">
+                  Understand your health in <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-dark">plain language.</span>
+                </h1>
+                <p className="text-xl text-text-main mb-10 max-w-2xl mx-auto leading-relaxed">
+                  Expert medical analysis for reports, symptoms, and wearable data. Empathetic, accurate, and always ready to help you navigate your wellness journey.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                    onClick={() => setView('input')}
+                    className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                  >
+                    Start Analysis <ArrowRight size={20} />
+                  </button>
+                  <button
+                    onClick={() => setView('voice')}
+                    className="w-full sm:w-auto px-8 py-4 bg-white border border-brand-primary text-brand-primary rounded-2xl font-semibold hover:bg-teal-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Mic size={20} />
+                    Talk to MediAssist AI
+                  </button>
+                </div>
 
-              <div className="mt-24 grid md:grid-cols-3 gap-8 text-left">
-                {[
-                  { icon: FileText, title: "Report Parsing", desc: "Extract data from blood tests, lab panels, and imaging reports." },
-                  { icon: Thermometer, title: "Symptom Logic", desc: "Map your experienced symptoms to potential health conditions." },
-                  { icon: Pill, title: "Interaction Check", desc: "Flag potential side effects and drug-to-drug interactions." }
-                ].map((feature, idx) => (
-                  <div key={idx} className="p-6 rounded-2xl bg-white border border-border-base shadow-sm hover:shadow-md transition-all group">
-                    <div className="w-12 h-12 rounded-2xl bg-bg-base flex items-center justify-center text-text-muted mb-4 group-hover:bg-teal-50 group-hover:text-brand-primary transition-colors">
-                      <feature.icon size={24} />
+                <div className="mt-24 grid md:grid-cols-3 gap-8 text-left">
+                  {[
+                    { icon: FileText, title: "Report Parsing", desc: "Extract data from blood tests, lab panels, and imaging reports." },
+                    { icon: Thermometer, title: "Symptom Logic", desc: "Map your experienced symptoms to potential health conditions." },
+                    { icon: Pill, title: "Interaction Check", desc: "Flag potential side effects and drug-to-drug interactions." }
+                  ].map((feature, idx) => (
+                    <div key={idx} className="p-6 rounded-2xl bg-white border border-border-base shadow-sm hover:shadow-md transition-all group">
+                      <div className="w-12 h-12 rounded-2xl bg-bg-base flex items-center justify-center text-text-muted mb-4 group-hover:bg-teal-50 group-hover:text-brand-primary transition-colors">
+                        <feature.icon size={24} />
+                      </div>
+                      <h3 className="text-lg font-bold mb-2 text-text-bold">{feature.title}</h3>
+                      <p className="text-text-main text-sm leading-relaxed">{feature.desc}</p>
                     </div>
-                    <h3 className="text-lg font-bold mb-2 text-text-bold">{feature.title}</h3>
-                    <p className="text-text-main text-sm leading-relaxed">{feature.desc}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </motion.div>
+            </motion.section>
           )}
 
           {view === 'voice' && (
