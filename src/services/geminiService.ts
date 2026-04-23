@@ -3,6 +3,7 @@ import { AnalysisOutput, PatientProfile, VoiceClassification } from "../types";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
 const missingApiKeyError = "Missing Gemini API key. Set VITE_GEMINI_API_KEY.";
+const defaultTextModel = (import.meta.env.VITE_GEMINI_TEXT_MODEL as string | undefined) || "gemini-2.5-flash";
 
 export const hasGeminiApiKey = Boolean(apiKey);
 
@@ -35,6 +36,47 @@ const emergencyKeywords = [
 
 const hasEmergencySignal = (input: string) =>
   emergencyKeywords.some((keyword) => input.toLowerCase().includes(keyword));
+
+const getResponseText = (response: unknown): string => {
+  if (!response || typeof response !== "object") {
+    return "";
+  }
+
+  const candidate = response as {
+    text?: string | (() => string);
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
+    }>;
+  };
+
+  if (typeof candidate.text === "function") {
+    return candidate.text().trim();
+  }
+  if (typeof candidate.text === "string") {
+    return candidate.text.trim();
+  }
+
+  const partText = candidate.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+
+  return partText || "";
+};
+
+const parseJsonResponse = <T>(rawText: string): T => {
+  try {
+    return JSON.parse(rawText) as T;
+  } catch {
+    const objectMatch = rawText.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+      return JSON.parse(objectMatch[0]) as T;
+    }
+    throw new Error("Gemini returned an invalid JSON response.");
+  }
+};
 
 export async function classifyIntent(userInput: string): Promise<VoiceClassification> {
   if (!hasGeminiApiKey) {
@@ -78,7 +120,7 @@ export async function classifyIntent(userInput: string): Promise<VoiceClassifica
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: defaultTextModel,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -93,7 +135,8 @@ export async function classifyIntent(userInput: string): Promise<VoiceClassifica
     }
   });
 
-  return JSON.parse(response.text) as VoiceClassification;
+  const rawText = getResponseText(response);
+  return parseJsonResponse<VoiceClassification>(rawText);
 }
 
 export async function analyzeMedicalData(
@@ -191,7 +234,7 @@ export async function analyzeMedicalData(
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: defaultTextModel,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -273,7 +316,8 @@ export async function analyzeMedicalData(
     }
   });
 
-  return JSON.parse(response.text) as AnalysisOutput;
+  const rawText = getResponseText(response);
+  return parseJsonResponse<AnalysisOutput>(rawText);
 }
 
 export async function generateVoiceResponse(
@@ -318,7 +362,7 @@ export async function generateVoiceResponse(
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: defaultTextModel,
     contents: [
       ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
       { role: 'user', parts: [{ text: userInput }] }
@@ -328,7 +372,7 @@ export async function generateVoiceResponse(
     }
   });
 
-  return response.text;
+  return getResponseText(response);
 }
 
 export async function generateSpeech(text: string): Promise<string> {
