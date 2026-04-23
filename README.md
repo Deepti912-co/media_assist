@@ -15,6 +15,6 @@ View your app in AI Studio: https://ai.studio/apps/34834607-77a4-487f-938c-e14d2
 
 1. Install dependencies:
    `npm install`
-2. Set `VITE_GEMINI_API_KEY` in a local `.env` file (or `GEMINI_API_KEY` in `.env.local`)
+2. Set `VITE_GEMINI_API_KEY` in your environment (for Vercel, add it in **Project Settings → Environment Variables** for Production/Preview/Development)
 3. Run the app:
    `npm run dev`
