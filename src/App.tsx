@@ -77,6 +77,7 @@ export default function App() {
   const [view, setView] = useState<'input' | 'analysis' | 'landing' | 'voice'>('landing');
   const [loading, setLoading] = useState(false);
   const [reportText, setReportText] = useState('');
+  const [uploadMessage, setUploadMessage] = useState('');
   const [symptoms, setSymptoms] = useState('');
   const [profile, setProfile] = useState<PatientProfile>({ age: '', sex: 'Male', conditions: '', medications: '', allergies: '' });
   const [analysis, setAnalysis] = useState<AnalysisOutput | null>(null);
@@ -178,12 +179,45 @@ export default function App() {
     }
   };
 
+  const readFileAsText = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+
   const onDrop = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    if (file) {
-      // For demo purposes, we just simulate getting text from the file name or a mock.
-      // In real app, we'd use multimodal AI or OCR.
-      setReportText(`[SIMULATED DATA FROM ${file.name}]\nPatient shows elevated creatinine and borderline glucose.`);
+    if (!file) {
+      return;
+    }
+
+    try {
+      const isTextLikeFile =
+        file.type.startsWith('text/') ||
+        file.type === 'application/json' ||
+        file.name.endsWith('.csv') ||
+        file.name.endsWith('.tsv') ||
+        file.name.endsWith('.txt');
+
+      if (isTextLikeFile) {
+        const parsedText = (await readFileAsText(file)).trim();
+        if (!parsedText) {
+          setUploadMessage(`"${file.name}" is empty.`);
+          return;
+        }
+        setReportText(parsedText);
+        setUploadMessage(`Loaded ${file.name}`);
+        return;
+      }
+
+      const fileDescriptor = `[UPLOADED FILE]\nName: ${file.name}\nType: ${file.type || 'Unknown'}\nSize: ${Math.round(file.size / 1024)} KB\n\nNote: OCR extraction is not enabled yet for this file type. Please paste key report values below for best results.`;
+      setReportText(fileDescriptor);
+      setUploadMessage(`Attached ${file.name}`);
+    } catch (error) {
+      console.error(error);
+      setUploadMessage(`Could not read "${file.name}". Please try another file.`);
     }
   };
 
@@ -192,7 +226,10 @@ export default function App() {
     onDrop, 
     accept: { 
       'image/*': ['.jpeg', '.jpg', '.png'], 
-      'application/pdf': ['.pdf'] 
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+      'application/json': ['.json']
     } 
   });
 
@@ -524,6 +561,9 @@ export default function App() {
                           Use Sample Data
                         </button>
                       </div>
+                      {uploadMessage && (
+                        <p className="text-xs text-text-muted mt-3 px-1">{uploadMessage}</p>
+                      )}
                       <textarea 
                         value={reportText}
                         onChange={(e) => setReportText(e.target.value)}
