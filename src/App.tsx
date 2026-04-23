@@ -156,7 +156,7 @@ export default function App() {
         responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
       } else {
         // 2. Generate Spoken Response
-        responseText = await generateVoiceResponse(input, profile, analysis, voiceHistory);
+        responseText = await generateVoiceResponse(input, profile, analysis, newHistory);
       }
 
       setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
