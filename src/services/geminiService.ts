@@ -1,9 +1,7 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AnalysisOutput, PatientProfile, VoiceClassification } from "../types";
 
-const buildInjectedApiKey =
-  typeof process !== "undefined" ? process.env.GEMINI_API_KEY : undefined;
-const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || buildInjectedApiKey) as string;
+const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY) as string;
 const missingApiKeyError = "Missing Gemini API key. Set VITE_GEMINI_API_KEY (or GEMINI_API_KEY).";
 
 export const hasGeminiApiKey = Boolean(apiKey);
