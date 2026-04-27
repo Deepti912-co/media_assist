@@ -375,6 +375,70 @@ export async function generateVoiceResponse(
   return getResponseText(response);
 }
 
+export async function generateVoiceResponseStream(
+  userInput: string,
+  profile: PatientProfile,
+  currentAnalysis: AnalysisOutput | null | undefined,
+  history: { role: 'user' | 'model', content: string }[] = [],
+  onChunk?: (text: string) => void
+): Promise<string> {
+  if (!hasGeminiApiKey) {
+    const fallback = await generateVoiceResponse(userInput, profile, currentAnalysis, history);
+    onChunk?.(fallback);
+    return fallback;
+  }
+
+  const ai = getClient();
+  const systemInstruction = `
+    You are MediAssist, an expert voice-first AI medical assistant. 
+    You are designed to feel like talking to a knowledgeable, empathetic health companion.
+    
+    VOICE BEHAVIOUR RULES:
+    1. NEVER use bullet points, numbered lists, tables, markdown, or formatting symbols. 
+    2. Write in flowing, natural spoken sentences only.
+    3. Say medical full forms: "complete blood count, or CBC" not just "CBC". 
+    4. Keep responses between 3 and 6 sentences. Offer to continue.
+    5. At the end of every response about a medical finding, say: "Please remember, this is for your information only — your doctor is the right person to advise on next steps."
+    6. EMERGENCY: If the patient mentions chest pain, stroke symptoms, etc., IMMEDIATELY say: "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait."
+
+    INTENT ROUTING:
+    - REPORT_QUERY: Analysis logic for medical reports.
+    - SYMPTOM_INPUT: Clarifying questions + possibilities.
+    - MEDICATION_QUESTION: Factual info + pharmacist disclaimer.
+    - EMERGENCY: Immediate routing to help.
+    
+    PATIENT CONTEXT:
+    - Age: ${profile.age}, Sex: ${profile.sex}
+    - Conditions: ${profile.conditions || 'None'}
+    - Medications: ${profile.medications || 'None'}
+    
+    CURRENT ANALYSIS STATE: ${currentAnalysis ? JSON.stringify(currentAnalysis) : 'No report analysis performed yet.'}
+  `;
+
+  const stream = await ai.models.generateContentStream({
+    model: defaultTextModel,
+    contents: [
+      ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'model', parts: [{ text: h.content }] })),
+      { role: 'user', parts: [{ text: userInput }] }
+    ],
+    config: {
+      systemInstruction
+    }
+  });
+
+  let fullText = '';
+  for await (const chunk of stream) {
+    const chunkText = getResponseText(chunk);
+    if (!chunkText) {
+      continue;
+    }
+    fullText += chunkText;
+    onChunk?.(fullText);
+  }
+
+  return fullText.trim();
+}
+
 export async function generateSpeech(text: string): Promise<string> {
   const ai = getClient();
   const response = await ai.models.generateContent({
