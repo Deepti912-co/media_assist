@@ -324,7 +324,8 @@ export async function generateVoiceResponse(
   userInput: string,
   profile: PatientProfile,
   currentAnalysis?: AnalysisOutput | null,
-  history: { role: 'user' | 'model', content: string }[] = []
+  history: { role: 'user' | 'model', content: string }[] = [],
+  preferredLanguage = "English"
 ): Promise<string> {
   if (!hasGeminiApiKey) {
     if (hasEmergencySignal(userInput)) {
@@ -338,6 +339,7 @@ export async function generateVoiceResponse(
   const systemInstruction = `
     You are MediAssist, an expert voice-first AI medical assistant. 
     You are designed to feel like talking to a knowledgeable, empathetic health companion.
+    Speak in ${preferredLanguage} unless the user asks to switch.
     
     VOICE BEHAVIOUR RULES:
     1. NEVER use bullet points, numbered lists, tables, markdown, or formatting symbols. 
@@ -346,6 +348,7 @@ export async function generateVoiceResponse(
     4. Keep responses between 3 and 6 sentences. Offer to continue.
     5. At the end of every response about a medical finding, say: "Please remember, this is for your information only — your doctor is the right person to advise on next steps."
     6. EMERGENCY: If the patient mentions chest pain, stroke symptoms, etc., IMMEDIATELY say: "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait."
+    7. Tone must be soft, warm, and human-like. Use gentle phrasing and avoid robotic wording.
 
     INTENT ROUTING:
     - REPORT_QUERY: Analysis logic for medical reports.
@@ -380,10 +383,11 @@ export async function generateVoiceResponseStream(
   profile: PatientProfile,
   currentAnalysis: AnalysisOutput | null | undefined,
   history: { role: 'user' | 'model', content: string }[] = [],
-  onChunk?: (text: string) => void
+  onChunk?: (text: string) => void,
+  preferredLanguage = "English"
 ): Promise<string> {
   if (!hasGeminiApiKey) {
-    const fallback = await generateVoiceResponse(userInput, profile, currentAnalysis, history);
+    const fallback = await generateVoiceResponse(userInput, profile, currentAnalysis, history, preferredLanguage);
     onChunk?.(fallback);
     return fallback;
   }
@@ -392,6 +396,7 @@ export async function generateVoiceResponseStream(
   const systemInstruction = `
     You are MediAssist, an expert voice-first AI medical assistant. 
     You are designed to feel like talking to a knowledgeable, empathetic health companion.
+    Speak in ${preferredLanguage} unless the user asks to switch.
     
     VOICE BEHAVIOUR RULES:
     1. NEVER use bullet points, numbered lists, tables, markdown, or formatting symbols. 
@@ -400,6 +405,7 @@ export async function generateVoiceResponseStream(
     4. Keep responses between 3 and 6 sentences. Offer to continue.
     5. At the end of every response about a medical finding, say: "Please remember, this is for your information only — your doctor is the right person to advise on next steps."
     6. EMERGENCY: If the patient mentions chest pain, stroke symptoms, etc., IMMEDIATELY say: "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait."
+    7. Tone must be soft, warm, and human-like. Use gentle phrasing and avoid robotic wording.
 
     INTENT ROUTING:
     - REPORT_QUERY: Analysis logic for medical reports.

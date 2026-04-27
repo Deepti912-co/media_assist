@@ -70,6 +70,18 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
   </div>
 );
 
+const voiceLanguages = [
+  { label: 'English', code: 'en-US' },
+  { label: 'Hindi', code: 'hi-IN' },
+  { label: 'Marathi', code: 'mr-IN' },
+  { label: 'Gujarati', code: 'gu-IN' },
+  { label: 'Punjabi', code: 'pa-IN' },
+  { label: 'Bengali', code: 'bn-IN' },
+  { label: 'Kannada', code: 'kn-IN' },
+  { label: 'Tamil', code: 'ta-IN' },
+  { label: 'Telugu', code: 'te-IN' },
+] as const;
+
 // --- Main App ---
 
 export default function App() {
@@ -89,6 +101,7 @@ export default function App() {
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -143,20 +156,33 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = selectedLanguageCode;
+    }
+  }, [selectedLanguageCode]);
+
   const speak = (text: string) => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       // Cancel any current speech
       window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = selectedLanguageCode;
       
-      // Select a calm voice if available
+      // Select a calm voice in the selected language if available
       const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Google UK English Female') || v.name.includes('Samantha'));
-      if (femaleVoice) utterance.voice = femaleVoice;
+      const languageVoices = voices.filter(
+        (voice) => voice.lang.toLowerCase().startsWith(selectedLanguageCode.split('-')[0].toLowerCase())
+      );
+      const softVoice = languageVoices.find((voice) =>
+        /female|natural|neural|samantha|zira|karen|heera|lekha|madhur/i.test(voice.name)
+      ) || languageVoices[0];
+      if (softVoice) utterance.voice = softVoice;
       
-      utterance.pitch = 1.0;
-      utterance.rate = 0.95; // Slightly slower for clarity
+      utterance.pitch = 0.92;
+      utterance.rate = 0.9;
+      utterance.volume = 0.92;
       
       utterance.onstart = () => setIsPlaying(true);
       utterance.onend = () => setIsPlaying(false);
@@ -184,6 +210,7 @@ export default function App() {
         responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
         setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       } else {
+        const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
         // 2. Stream spoken response from Gemini
         setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
         responseText = await generateVoiceResponseStream(
@@ -203,7 +230,8 @@ export default function App() {
               }
               return updated;
             });
-          }
+          },
+          selectedLanguage
         );
       }
 
@@ -515,6 +543,22 @@ export default function App() {
                       <h3 className="font-bold text-text-bold">Voice Consultation</h3>
                       <p className="text-xs text-text-muted">Speak naturally to your health companion</p>
                     </div>
+                  </div>
+                  <div className="mb-6">
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-widest mb-2">
+                      Conversation language
+                    </label>
+                    <select
+                      value={selectedLanguageCode}
+                      onChange={(event) => setSelectedLanguageCode(event.target.value as (typeof voiceLanguages)[number]['code'])}
+                      className="w-full border border-border-base rounded-xl px-3 py-2 text-sm text-text-main bg-white focus:outline-none focus:ring-2 focus:ring-teal-100"
+                    >
+                      {voiceLanguages.map((language) => (
+                        <option key={language.code} value={language.code}>
+                          {language.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="min-h-[120px] max-h-[300px] overflow-y-auto mb-6 space-y-4 px-2">
