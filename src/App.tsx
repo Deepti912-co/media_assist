@@ -85,6 +85,8 @@ export default function App() {
   // Voice State
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [voiceError, setVoiceError] = useState('');
+  const [isSpeechSupported, setIsSpeechSupported] = useState(true);
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -96,22 +98,48 @@ export default function App() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
         let interimTranscript = '';
+        let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            handleVoiceInput(event.results[i][0].transcript);
+            finalTranscript += `${event.results[i][0].transcript} `;
           } else {
             interimTranscript += event.results[i][0].transcript;
           }
         }
         setTranscript(interimTranscript);
+        if (finalTranscript.trim()) {
+          setTranscript('');
+          handleVoiceInput(finalTranscript.trim());
+        }
+      };
+
+      recognitionRef.current.onstart = () => {
+        setVoiceError('');
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        const errorCode = event?.error as string | undefined;
+        const errorMessageMap: Record<string, string> = {
+          'not-allowed': 'Microphone access is blocked. Please allow microphone permission in your browser settings and try again.',
+          'service-not-allowed': 'Speech recognition service is unavailable for this browser profile.',
+          'audio-capture': 'No microphone was detected. Please connect a microphone and try again.',
+          'network': 'Speech recognition network error. Please check your connection and retry.',
+          'no-speech': 'No speech detected. Try speaking a little louder and closer to your microphone.'
+        };
+        setVoiceError(errorMessageMap[errorCode || ''] || 'Voice input failed. Please try again.');
+        setIsListening(false);
       };
 
       recognitionRef.current.onend = () => {
         setIsListening(false);
       };
+    } else {
+      setIsSpeechSupported(false);
+      setVoiceError('This browser does not support speech recognition. Please use the latest version of Chrome, Edge, or Safari.');
     }
   }, []);
 
@@ -188,13 +216,24 @@ export default function App() {
   };
 
   const toggleListening = () => {
+    if (!isSpeechSupported || !recognitionRef.current) {
+      setVoiceError('Voice recognition is unavailable in this browser. Please try Chrome, Edge, or Safari.');
+      return;
+    }
+
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
     } else {
       setTranscript('');
-      recognitionRef.current?.start();
-      setIsListening(true);
+      setVoiceError('');
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        setVoiceError('Could not start microphone capture. Please refresh and try again.');
+        setIsListening(false);
+      }
     }
   };
 
@@ -443,7 +482,7 @@ export default function App() {
                   </AnimatePresence>
                   <button 
                     onClick={toggleListening}
-                    disabled={loading || isPlaying}
+                    disabled={loading || isPlaying || !isSpeechSupported}
                     className={cn(
                       "relative w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-2xl",
                       isListening ? "bg-red-500 scale-110" : "bg-brand-primary hover:scale-105",
@@ -479,6 +518,11 @@ export default function App() {
                   </div>
 
                   <div className="min-h-[120px] max-h-[300px] overflow-y-auto mb-6 space-y-4 px-2">
+                    {voiceError && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs">
+                        {voiceError}
+                      </div>
+                    )}
                     {voiceHistory.length === 0 && !transcript && !loading && (
                       <div className="text-center py-10 opacity-50 italic text-sm">
                         Tap the microphone and say something like:<br/>
