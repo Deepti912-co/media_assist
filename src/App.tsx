@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { cn } from './lib/utils';
-import { analyzeMedicalData, generateVoiceResponse, classifyIntent, hasGeminiApiKey } from './services/geminiService';
+import { analyzeMedicalData, generateVoiceResponseStream, classifyIntent, hasGeminiApiKey } from './services/geminiService';
 import { 
   AnalysisOutput, 
   PatientProfile, 
@@ -154,12 +154,31 @@ export default function App() {
 
       if (classification.intent === 'EMERGENCY') {
         responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
+        setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       } else {
-        // 2. Generate Spoken Response
-        responseText = await generateVoiceResponse(input, profile, analysis, newHistory);
+        // 2. Stream spoken response from Gemini
+        setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
+        responseText = await generateVoiceResponseStream(
+          input,
+          profile,
+          analysis,
+          newHistory,
+          (partialText) => {
+            setVoiceHistory((prev) => {
+              if (prev.length === 0) {
+                return prev;
+              }
+              const updated = [...prev];
+              const lastEntry = updated[updated.length - 1];
+              if (lastEntry.role === 'model') {
+                updated[updated.length - 1] = { role: 'model', content: partialText };
+              }
+              return updated;
+            });
+          }
+        );
       }
 
-      setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       speak(responseText);
     } catch (error) {
       console.error(error);
