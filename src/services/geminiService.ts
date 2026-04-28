@@ -464,3 +464,36 @@ export async function generateSpeech(text: string): Promise<string> {
   if (!base64Audio) throw new Error("Failed to generate speech");
   return base64Audio;
 }
+
+export async function transcribeVoiceInput(
+  audioBase64: string,
+  mimeType: string,
+  languageCode = "en-US"
+): Promise<string> {
+  if (!hasGeminiApiKey) {
+    throw new Error("Voice transcription requires VITE_GEMINI_API_KEY.");
+  }
+
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model: defaultTextModel,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Transcribe this audio to plain text in ${languageCode}. Return only the transcript text without labels, notes, or markdown.`
+          },
+          {
+            inlineData: {
+              mimeType,
+              data: audioBase64
+            }
+          }
+        ]
+      }
+    ]
+  });
+
+  return getResponseText(response).trim();
+}

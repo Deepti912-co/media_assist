@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { cn } from './lib/utils';
-import { analyzeMedicalData, generateVoiceResponseStream, classifyIntent, hasGeminiApiKey } from './services/geminiService';
+import { analyzeMedicalData, generateVoiceResponseStream, classifyIntent, hasGeminiApiKey, transcribeVoiceInput } from './services/geminiService';
 import { 
   AnalysisOutput, 
   PatientProfile, 
@@ -102,8 +102,12 @@ export default function App() {
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
+  const [useRecorderMode, setUseRecorderMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const microphoneStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -150,9 +154,15 @@ export default function App() {
       recognitionRef.current.onend = () => {
         setIsListening(false);
       };
+      setUseRecorderMode(false);
+      setIsSpeechSupported(true);
+    } else if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia && 'MediaRecorder' in window) {
+      setUseRecorderMode(true);
+      setIsSpeechSupported(true);
+      setVoiceError('');
     } else {
       setIsSpeechSupported(false);
-      setVoiceError('This browser does not support speech recognition. Please use the latest version of Chrome, Edge, or Safari.');
+      setVoiceError('Voice input is unavailable in this browser. Please update your browser and ensure microphone access is enabled.');
     }
   }, []);
 
@@ -243,9 +253,113 @@ export default function App() {
     }
   };
 
+  const blobToBase64 = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        const base64Data = result.split(',')[1] || '';
+        if (!base64Data) {
+          reject(new Error('Failed to encode audio.'));
+          return;
+        }
+        resolve(base64Data);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Failed to read audio blob.'));
+      reader.readAsDataURL(blob);
+    });
+
+  const stopMediaRecorderTracks = () => {
+    if (microphoneStreamRef.current) {
+      microphoneStreamRef.current.getTracks().forEach((track) => track.stop());
+      microphoneStreamRef.current = null;
+    }
+  };
+
+  const handleRecorderTranscription = async () => {
+    const chunks = audioChunksRef.current;
+    audioChunksRef.current = [];
+    if (!chunks.length) {
+      setVoiceError('No speech captured. Please try speaking again.');
+      return;
+    }
+
+    const mimeType = chunks[0]?.type || 'audio/webm';
+    const audioBlob = new Blob(chunks, { type: mimeType });
+
+    try {
+      setLoading(true);
+      setVoiceError('');
+      const base64Audio = await blobToBase64(audioBlob);
+      const transcriptText = await transcribeVoiceInput(base64Audio, mimeType, selectedLanguageCode);
+      if (!transcriptText) {
+        setVoiceError('I could not detect speech clearly. Please try again in a quieter environment.');
+        return;
+      }
+      await handleVoiceInput(transcriptText);
+    } catch (error) {
+      console.error(error);
+      setVoiceError('Could not transcribe your recording. Check microphone permissions and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRecorderListening = async () => {
+    if (isListening) {
+      mediaRecorderRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    setTranscript('');
+    setVoiceError('');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      microphoneStreamRef.current = stream;
+      const mimeOptions = [
+        'audio/webm;codecs=opus',
+        'audio/ogg;codecs=opus',
+        'audio/webm',
+        'audio/ogg'
+      ];
+      const selectedMimeType = mimeOptions.find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = selectedMimeType ? new MediaRecorder(stream, { mimeType: selectedMimeType }) : new MediaRecorder(stream);
+
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        void handleRecorderTranscription();
+        stopMediaRecorderTracks();
+      };
+      recorder.onerror = () => {
+        setVoiceError('Recording failed. Please retry.');
+        setIsListening(false);
+        stopMediaRecorderTracks();
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsListening(true);
+    } catch {
+      setVoiceError('Could not start microphone capture. Please refresh and try again.');
+      setIsListening(false);
+      stopMediaRecorderTracks();
+    }
+  };
+
   const toggleListening = () => {
     if (!isSpeechSupported || !recognitionRef.current) {
-      setVoiceError('Voice recognition is unavailable in this browser. Please try Chrome, Edge, or Safari.');
+      if (useRecorderMode) {
+        void toggleRecorderListening();
+        return;
+      }
+      setVoiceError('Voice recognition is unavailable in this browser.');
       return;
     }
 
@@ -264,6 +378,14 @@ export default function App() {
       }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop?.();
+      mediaRecorderRef.current?.stop?.();
+      stopMediaRecorderTracks();
+    };
+  }, []);
 
   const readFileAsText = (file: File) =>
     new Promise<string>((resolve, reject) => {
