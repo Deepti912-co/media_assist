@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { cn } from './lib/utils';
-import { analyzeMedicalData, generateVoiceResponseStream, classifyIntent, hasGeminiApiKey, transcribeVoiceInput } from './services/geminiService';
+import { analyzeMedicalData, generateSpeech, generateVoiceResponseStream, classifyIntent, hasGeminiApiKey, transcribeVoiceInput } from './services/geminiService';
 import { 
   AnalysisOutput, 
   PatientProfile, 
@@ -172,34 +172,63 @@ export default function App() {
     }
   }, [selectedLanguageCode]);
 
-  const speak = (text: string) => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      // Cancel any current speech
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = selectedLanguageCode;
-      
-      // Select a calm voice in the selected language if available
-      const voices = window.speechSynthesis.getVoices();
-      const languageVoices = voices.filter(
-        (voice) => voice.lang.toLowerCase().startsWith(selectedLanguageCode.split('-')[0].toLowerCase())
-      );
-      const softVoice = languageVoices.find((voice) =>
-        /female|natural|neural|samantha|zira|karen|heera|lekha|madhur/i.test(voice.name)
-      ) || languageVoices[0];
-      if (softVoice) utterance.voice = softVoice;
-      
-      utterance.pitch = 0.92;
-      utterance.rate = 0.9;
-      utterance.volume = 0.92;
-      
-      utterance.onstart = () => setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
-      
-      window.speechSynthesis.speak(utterance);
+  const speakWithBrowserVoice = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return;
     }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = selectedLanguageCode;
+
+    const voices = window.speechSynthesis.getVoices();
+    const languageVoices = voices.filter(
+      (voice) => voice.lang.toLowerCase().startsWith(selectedLanguageCode.split('-')[0].toLowerCase())
+    );
+    const softVoice = languageVoices.find((voice) =>
+      /female|natural|neural|samantha|zira|karen|heera|lekha|madhur/i.test(voice.name)
+    ) || languageVoices[0];
+    if (softVoice) {
+      utterance.voice = softVoice;
+    }
+
+    utterance.pitch = 0.92;
+    utterance.rate = 0.88;
+    utterance.volume = 0.9;
+
+    utterance.onstart = () => setIsPlaying(true);
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const speak = async (text: string) => {
+    if (!text.trim()) {
+      return;
+    }
+
+    if (hasGeminiApiKey) {
+      try {
+        setIsPlaying(true);
+        const base64Audio = await generateSpeech(text, selectedLanguageCode);
+        const mimeType = 'audio/wav';
+        const audio = new Audio(`data:${mimeType};base64,${base64Audio}`);
+        audioRef.current = audio;
+        audio.onended = () => setIsPlaying(false);
+        audio.onerror = () => {
+          setIsPlaying(false);
+          speakWithBrowserVoice(text);
+        };
+        await audio.play();
+        return;
+      } catch (error) {
+        console.error('Gemini TTS failed, falling back to browser speech synthesis:', error);
+        setIsPlaying(false);
+      }
+    }
+
+    speakWithBrowserVoice(text);
   };
 
   const handleVoiceInput = async (input: string) => {
@@ -245,7 +274,7 @@ export default function App() {
         );
       }
 
-      speak(responseText);
+      await speak(responseText);
     } catch (error) {
       console.error(error);
     } finally {

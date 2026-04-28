@@ -445,11 +445,28 @@ export async function generateVoiceResponseStream(
   return fullText.trim();
 }
 
-export async function generateSpeech(text: string): Promise<string> {
+export async function generateSpeech(text: string, languageCode = "en-US"): Promise<string> {
   const ai = getClient();
+  const languageNameMap: Record<string, string> = {
+    "en-US": "English",
+    "hi-IN": "Hindi",
+    "mr-IN": "Marathi",
+    "gu-IN": "Gujarati",
+    "pa-IN": "Punjabi",
+    "bn-IN": "Bengali",
+    "kn-IN": "Kannada",
+    "ta-IN": "Tamil",
+    "te-IN": "Telugu",
+  };
+  const targetLanguage = languageNameMap[languageCode] || languageCode;
+
   const response = await ai.models.generateContent({
     model: "gemini-3.1-flash-tts-preview",
-    contents: [{ parts: [{ text: `Read this with an empathetic, calm medical professional voice: ${text}` }] }],
+    contents: [{
+      parts: [{
+        text: `Speak this response in ${targetLanguage} with native pronunciation, smooth pacing, and a soft empathetic medical tone. Do not spell words letter by letter. Text: ${text}`
+      }]
+    }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
