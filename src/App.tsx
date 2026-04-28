@@ -768,6 +768,40 @@ export default function App() {
                     </button>
                   )}
                 </div>
+
+                <div className="w-full max-w-2xl bg-white rounded-3xl p-6 border border-border-base shadow-lg mt-6">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Upload size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-text-bold">Upload Prescriptions & Records</h3>
+                        <p className="text-xs text-text-muted">Share prescription files or report screenshots anytime during voice chat.</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Optional</span>
+                  </div>
+
+                  <div
+                    {...getRootProps()}
+                    className={cn(
+                      "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all",
+                      isDragActive ? "border-teal-400 bg-teal-50/50" : "border-border-base hover:border-teal-300"
+                    )}
+                  >
+                    <input {...getInputProps()} />
+                    <div className="w-12 h-12 bg-bg-base rounded-xl flex items-center justify-center mx-auto mb-3 text-text-muted">
+                      <Upload size={24} />
+                    </div>
+                    <h4 className="font-semibold text-text-bold mb-1">Drop files here or click to upload</h4>
+                    <p className="text-xs text-text-muted">PDF, PNG, JPG, TXT, CSV, JSON</p>
+                  </div>
+
+                  {uploadMessage && (
+                    <p className="text-xs text-text-muted mt-3 px-1">{uploadMessage}</p>
+                  )}
+                </div>
               </div>
 
               <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex gap-3 mb-8">
