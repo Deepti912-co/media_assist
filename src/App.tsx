@@ -100,6 +100,7 @@ export default function App() {
   const [voiceError, setVoiceError] = useState('');
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
+  const [hasStartedVoiceConsultation, setHasStartedVoiceConsultation] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
   const [useRecorderMode, setUseRecorderMode] = useState(false);
@@ -281,6 +282,20 @@ export default function App() {
       setLoading(false);
     }
   };
+
+
+
+  useEffect(() => {
+    if (view !== 'voice' || hasStartedVoiceConsultation) {
+      return;
+    }
+
+    const greeting = `Hi, I'm your AI health assistant. I'll talk with you and try to understand what's going on.\n\nYou can tell me how you're feeling, or if you have any medical reports or prescriptions, you can share those too.`;
+
+    setVoiceHistory([{ role: 'model', content: greeting }]);
+    setHasStartedVoiceConsultation(true);
+    void speak(greeting);
+  }, [view, hasStartedVoiceConsultation, selectedLanguageCode]);
 
   const blobToBase64 = (blob: Blob) =>
     new Promise<string>((resolve, reject) => {
@@ -489,6 +504,7 @@ export default function App() {
     setReportText('');
     setSymptoms('');
     setView('landing');
+    setHasStartedVoiceConsultation(false);
   };
 
   return (
@@ -742,7 +758,10 @@ export default function App() {
 
                   {voiceHistory.length > 0 && (
                     <button 
-                      onClick={() => setVoiceHistory([])}
+                      onClick={() => {
+                        setVoiceHistory([]);
+                        setHasStartedVoiceConsultation(false);
+                      }}
                       className="text-xs font-bold text-text-muted hover:text-brand-primary flex items-center gap-1 mx-auto"
                     >
                       Clear conversation
