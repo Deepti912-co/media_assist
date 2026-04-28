@@ -86,7 +86,7 @@ const voiceLanguages = [
 
 export default function App() {
   const geminiUnavailable = !hasGeminiApiKey;
-  const [view, setView] = useState<'input' | 'analysis' | 'landing' | 'voice'>('landing');
+  const [view, setView] = useState<'input' | 'analysis' | 'landing' | 'voice'>('voice');
   const [loading, setLoading] = useState(false);
   const [reportText, setReportText] = useState('');
   const [uploadMessage, setUploadMessage] = useState('');
@@ -290,7 +290,7 @@ export default function App() {
       return;
     }
 
-    const greeting = `Hi, I'm your AI health assistant. I'll talk with you and try to understand what's going on.\n\nYou can tell me how you're feeling, or if you have any medical reports or prescriptions, you can share those too.`;
+    const greeting = `Hi, I'm your AI health assistant, and we'll begin with voice support.\n\nBefore we continue, do you have any prescription or medical report to share?\nIf yes, please read out key values or upload them and I will explain them.\nIf not, you can tell me any health problem you're facing, and I'll guide you step by step.`;
 
     setVoiceHistory([{ role: 'model', content: greeting }]);
     setHasStartedVoiceConsultation(true);
@@ -503,7 +503,7 @@ export default function App() {
     setAnalysis(null);
     setReportText('');
     setSymptoms('');
-    setView('landing');
+    setView('voice');
     setHasStartedVoiceConsultation(false);
   };
 
