@@ -331,7 +331,7 @@ export async function generateVoiceResponse(
 ): Promise<string> {
   if (!hasGeminiApiKey) {
     if (hasEmergencySignal(userInput)) {
-      return "This could be serious. I strongly recommend seeking immediate medical attention. If you have severe symptoms, call your local emergency services now.";
+      return "This may be serious. Please seek immediate medical attention or go to the nearest hospital.";
     }
 
     return "I’m running in demo mode right now because the Gemini key is missing, but I can still help with general guidance. Based on what you shared, keep tracking your symptoms and arrange a routine medical review so a clinician can interpret your findings safely. If your symptoms suddenly worsen, seek urgent care immediately. Please remember, this is for your information only — your doctor is the right person to advise on next steps.";
@@ -360,9 +360,9 @@ export async function generateVoiceResponse(
 
     MEDICAL SAFETY RULES:
     - Never say "you have X disease".
-    - Use uncertainty language like "this could indicate" or "one possibility is".
+    - Use uncertainty language like "this could be due to...", "one possibility is...", and "it would be best to confirm with a doctor".
     - If serious red flags appear, clearly say exactly:
-      "This could be serious. I recommend you see a doctor as soon as possible."
+      "This may be serious. Please seek immediate medical attention or go to the nearest hospital."
     - Do not prescribe new medicines or exact dosages.
 
     ANALYSIS LOGIC:
@@ -371,6 +371,10 @@ export async function generateVoiceResponse(
 
     GUIDANCE RULES:
     - Provide practical lifestyle advice, what to monitor, and when to seek care.
+
+    ESCALATION FOR UNCERTAINTY:
+    - If uncertainty is high, say exactly: "I'm not fully certain."
+    - Then recommend professional consultation.
 
     FAILSAFE:
     - If user input is unclear, ask exactly: "Can you explain that a bit more?"
@@ -446,9 +450,9 @@ export async function generateVoiceResponseStream(
 
     MEDICAL SAFETY RULES:
     - Never say "you have X disease".
-    - Use uncertainty language like "this could indicate" or "one possibility is".
+    - Use uncertainty language like "this could be due to...", "one possibility is...", and "it would be best to confirm with a doctor".
     - If serious red flags appear, clearly say exactly:
-      "This could be serious. I recommend you see a doctor as soon as possible."
+      "This may be serious. Please seek immediate medical attention or go to the nearest hospital."
     - Do not prescribe new medicines or exact dosages.
 
     ANALYSIS LOGIC:
@@ -457,6 +461,10 @@ export async function generateVoiceResponseStream(
 
     GUIDANCE RULES:
     - Provide practical lifestyle advice, what to monitor, and when to seek care.
+
+    ESCALATION FOR UNCERTAINTY:
+    - If uncertainty is high, say exactly: "I'm not fully certain."
+    - Then recommend professional consultation.
 
     FAILSAFE:
     - If user input is unclear, ask exactly: "Can you explain that a bit more?"
