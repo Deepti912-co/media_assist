@@ -16,3 +16,12 @@ This contains everything you need to run your app locally.
 2. Set `VITE_GEMINI_API_KEY` in your environment (for Vercel, add it in **Project Settings → Environment Variables** for Production/Preview/Development)
 3. Run the app:
    `npm run dev`
+
+
+## Live Voice Architecture (Recommended)
+
+For production voice conversation, use a strict streaming chain:
+
+`Mic → Frontend stream (WebRTC/WebSocket) → Backend broker (persistent session manager) → Gemini Live API → Audio stream back to frontend → User playback`.
+
+See `VOICE_FLOW_SPEC.md` for the exact layer responsibilities, event contract, and security rules.
