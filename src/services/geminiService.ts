@@ -512,7 +512,14 @@ export async function generateVoiceResponseStream(
     onChunk?.(fullText);
   }
 
-  return fullText.trim();
+  const finalText = fullText.trim();
+  if (finalText) {
+    return finalText;
+  }
+
+  const fallback = await generateVoiceResponse(userInput, profile, currentAnalysis, history, preferredLanguage);
+  onChunk?.(fallback);
+  return fallback;
 }
 
 export async function generateSpeech(text: string): Promise<string> {

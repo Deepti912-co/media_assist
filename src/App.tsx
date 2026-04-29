@@ -254,6 +254,15 @@ export default function App() {
       await speak(responseText);
     } catch (error) {
       console.error(error);
+      setVoiceError('I could not generate a response just now. Please try again.');
+      setVoiceHistory((prev) => {
+        const updated = [...prev];
+        const lastEntry = updated[updated.length - 1];
+        if (lastEntry?.role === 'model' && !lastEntry.content.trim()) {
+          updated.pop();
+        }
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
