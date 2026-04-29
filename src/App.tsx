@@ -26,9 +26,7 @@ import {
   ExternalLink,
   ChevronDown,
   Mic,
-  MicOff,
   Volume2,
-  Square,
   Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -421,6 +419,19 @@ export default function App() {
     }
   };
 
+
+  useEffect(() => {
+    if (view !== 'voice' || loading || isPlaying || isListening) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      toggleListening();
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [view, loading, isPlaying, isListening, useRecorderMode, isSpeechSupported]);
+
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop?.();
@@ -685,17 +696,16 @@ export default function App() {
                       />
                     )}
                   </AnimatePresence>
-                  <button 
-                    onClick={toggleListening}
-                    disabled={loading || isPlaying || !isSpeechSupported}
+                  <div
                     className={cn(
                       "relative w-40 h-40 voice-orb rounded-full flex items-center justify-center transition-all shadow-2xl",
-                      isListening ? "bg-red-500 scale-110" : "bg-brand-primary warm-glow-button hover:scale-105",
-                      (loading || isPlaying) && "opacity-50 cursor-not-allowed"
+                      isListening ? "bg-red-500 scale-110" : "bg-brand-primary warm-glow-button"
                     )}
                   >
-                    {isListening ? <Square size={48} className="text-white fill-white" /> : <Mic size={48} className="text-white" />}
-                  </button>
+                    <span className="text-white text-center px-6 text-sm font-semibold leading-relaxed">
+                      {isListening ? 'Listening… say hello to begin' : 'Preparing microphone...'}
+                    </span>
+                  </div>
                   
                   {loading && (
                     <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 text-brand-primary font-bold whitespace-nowrap">
@@ -746,7 +756,7 @@ export default function App() {
                     )}
                     {voiceHistory.length === 0 && !transcript && !loading && (
                       <div className="text-center py-10 opacity-50 italic text-sm">
-                        Tap the microphone and say something like:<br/>
+                        The microphone starts automatically. Say hello or ask something like:<br/>
                         "Can you explain my recent blood sugar levels?" or<br/>
                         "I've been feeling a bit dizzy today."
                       </div>
