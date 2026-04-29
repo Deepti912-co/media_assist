@@ -539,7 +539,7 @@ export async function generateSpeech(text: string, languageCode = "en-US"): Prom
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' },
+          prebuiltVoiceConfig: { voiceName: 'Erinome' },
         },
       },
     },
