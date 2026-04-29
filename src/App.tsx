@@ -101,7 +101,7 @@ export default function App() {
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [hasStartedVoiceConsultation, setHasStartedVoiceConsultation] = useState(false);
-  const [voiceStage, setVoiceStage] = useState<'request_upload' | 'awaiting_upload' | 'analyzing_upload' | 'consultation'>('request_upload');
+  const [voiceStage, setVoiceStage] = useState<'request_upload' | 'awaiting_upload' | 'analyzing_upload' | 'consultation'>('consultation');
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
   const [useRecorderMode, setUseRecorderMode] = useState(false);
@@ -243,39 +243,33 @@ export default function App() {
     try {
       let responseText = '';
 
-      if (voiceStage === 'request_upload' || voiceStage === 'awaiting_upload') {
-        responseText = 'Please upload your files and prescription using the upload option below. Once uploaded, I will analyze them and explain everything respectfully.';
-        setVoiceStage('awaiting_upload');
+      const classification = await classifyIntent(input);
+      if (classification.intent === 'EMERGENCY') {
+        responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
         setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       } else {
-        const classification = await classifyIntent(input);
-        if (classification.intent === 'EMERGENCY') {
-          responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
-          setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
-        } else {
-          const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
-          setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
-          responseText = await generateVoiceResponseStream(
-            input,
-            profile,
-            analysis,
-            newHistory,
-            (partialText) => {
-              setVoiceHistory((prev) => {
-                if (prev.length === 0) {
-                  return prev;
-                }
-                const updated = [...prev];
-                const lastEntry = updated[updated.length - 1];
-                if (lastEntry.role === 'model') {
-                  updated[updated.length - 1] = { role: 'model', content: partialText };
-                }
-                return updated;
-              });
-            },
-            selectedLanguage
-          );
-        }
+        const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
+        setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
+        responseText = await generateVoiceResponseStream(
+          input,
+          profile,
+          analysis,
+          newHistory,
+          (partialText) => {
+            setVoiceHistory((prev) => {
+              if (prev.length === 0) {
+                return prev;
+              }
+              const updated = [...prev];
+              const lastEntry = updated[updated.length - 1];
+              if (lastEntry.role === 'model') {
+                updated[updated.length - 1] = { role: 'model', content: partialText };
+              }
+              return updated;
+            });
+          },
+          selectedLanguage
+        );
       }
 
       await speak(responseText);
@@ -293,10 +287,10 @@ export default function App() {
       return;
     }
 
-    const greeting = `Please upload your files and prescription.`;
+    const greeting = `Hi, I'm your AI health assistant. This is a private 1-on-1 conversation room. You can share symptoms now, and upload reports anytime for deeper analysis.`;
 
     setVoiceHistory([{ role: 'model', content: greeting }]);
-    setVoiceStage('awaiting_upload');
+    setVoiceStage('consultation');
     setHasStartedVoiceConsultation(true);
     void speak(greeting);
   }, [view, hasStartedVoiceConsultation, selectedLanguageCode]);
