@@ -68,17 +68,6 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
   </div>
 );
 
-const voiceLanguages = [
-  { label: 'English', code: 'en-US' },
-  { label: 'Hindi', code: 'hi-IN' },
-  { label: 'Marathi', code: 'mr-IN' },
-  { label: 'Gujarati', code: 'gu-IN' },
-  { label: 'Punjabi', code: 'pa-IN' },
-  { label: 'Bengali', code: 'bn-IN' },
-  { label: 'Kannada', code: 'kn-IN' },
-  { label: 'Tamil', code: 'ta-IN' },
-  { label: 'Telugu', code: 'te-IN' },
-] as const;
 
 // --- Main App ---
 
@@ -101,7 +90,6 @@ export default function App() {
   const [hasStartedVoiceConsultation, setHasStartedVoiceConsultation] = useState(false);
   const [voiceStage, setVoiceStage] = useState<'request_upload' | 'awaiting_upload' | 'analyzing_upload' | 'consultation'>('consultation');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
   const [useRecorderMode, setUseRecorderMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -115,7 +103,6 @@ export default function App() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
         let interimTranscript = '';
@@ -166,11 +153,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.lang = selectedLanguageCode;
-    }
-  }, [selectedLanguageCode]);
 
   const speakWithBrowserVoice = (text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -179,11 +161,11 @@ export default function App() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = selectedLanguageCode;
+    utterance.lang = navigator.language || "en-US";
 
     const voices = window.speechSynthesis.getVoices();
     const languageVoices = voices.filter(
-      (voice) => voice.lang.toLowerCase().startsWith(selectedLanguageCode.split('-')[0].toLowerCase())
+      (voice) => voice.lang.toLowerCase().startsWith((navigator.language || 'en-US').split('-')[0].toLowerCase())
     );
     const softVoice = languageVoices.find((voice) =>
       /female|natural|neural|samantha|zira|karen|heera|lekha|madhur/i.test(voice.name)
@@ -211,7 +193,7 @@ export default function App() {
     if (hasGeminiApiKey) {
       try {
         setIsPlaying(true);
-        const base64Audio = await generateSpeech(text, selectedLanguageCode);
+        const base64Audio = await generateSpeech(text);
         const mimeType = 'audio/wav';
         const audio = new Audio(`data:${mimeType};base64,${base64Audio}`);
         audioRef.current = audio;
@@ -246,8 +228,7 @@ export default function App() {
         responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
         setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       } else {
-        const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
-        setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
+          setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
         responseText = await generateVoiceResponseStream(
           input,
           profile,
@@ -266,7 +247,7 @@ export default function App() {
               return updated;
             });
           },
-          selectedLanguage
+          undefined
         );
       }
 
@@ -291,7 +272,7 @@ export default function App() {
     setVoiceStage('consultation');
     setHasStartedVoiceConsultation(true);
     void speak(greeting);
-  }, [view, hasStartedVoiceConsultation, selectedLanguageCode]);
+  }, [view, hasStartedVoiceConsultation]);
 
   const blobToBase64 = (blob: Blob) =>
     new Promise<string>((resolve, reject) => {
@@ -331,7 +312,7 @@ export default function App() {
       setLoading(true);
       setVoiceError('');
       const base64Audio = await blobToBase64(audioBlob);
-      const transcriptText = await transcribeVoiceInput(base64Audio, mimeType, selectedLanguageCode);
+      const transcriptText = await transcribeVoiceInput(base64Audio, mimeType);
       if (!transcriptText) {
         setVoiceError('I could not detect speech clearly. Please try again in a quieter environment.');
         return;
@@ -731,23 +712,6 @@ export default function App() {
                       <p className="text-xs text-text-muted">Speak naturally to your health companion</p>
                     </div>
                   </div>
-                  <div className="mb-6">
-                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-widest mb-2">
-                      Conversation language
-                    </label>
-                    <select
-                      value={selectedLanguageCode}
-                      onChange={(event) => setSelectedLanguageCode(event.target.value as (typeof voiceLanguages)[number]['code'])}
-                      className="w-full border border-border-base rounded-xl px-3 py-2 text-sm text-text-main bg-white focus:outline-none focus:ring-2 focus:ring-teal-100"
-                    >
-                      {voiceLanguages.map((language) => (
-                        <option key={language.code} value={language.code}>
-                          {language.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   <div className="min-h-[120px] max-h-[300px] overflow-y-auto mb-6 space-y-4 px-2">
                     {voiceError && (
                       <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs">
