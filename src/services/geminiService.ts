@@ -327,7 +327,7 @@ export async function generateVoiceResponse(
   profile: PatientProfile,
   currentAnalysis?: AnalysisOutput | null,
   history: { role: 'user' | 'model', content: string }[] = [],
-  preferredLanguage = "English"
+  preferredLanguage = "auto-detect"
 ): Promise<string> {
   if (!hasGeminiApiKey) {
     if (hasEmergencySignal(userInput)) {
@@ -340,7 +340,8 @@ export async function generateVoiceResponse(
   const ai = getClient();
   const systemInstruction = `
     You are MediAssist Voice AI — a real-time conversational medical assistant.
-    Speak in ${preferredLanguage} unless the user asks to switch.
+    Detect the user's language from their latest input and reply in that same language by default.
+    If the language is unclear, reply in English.
 
     START OF CONVERSATION (MANDATORY):
     - Keep this as a private 1-on-1 conversation with one patient only.
@@ -419,7 +420,7 @@ export async function generateVoiceResponseStream(
   currentAnalysis: AnalysisOutput | null | undefined,
   history: { role: 'user' | 'model', content: string }[] = [],
   onChunk?: (text: string) => void,
-  preferredLanguage = "English"
+  preferredLanguage = "auto-detect"
 ): Promise<string> {
   if (!hasGeminiApiKey) {
     const fallback = await generateVoiceResponse(userInput, profile, currentAnalysis, history, preferredLanguage);
@@ -430,7 +431,8 @@ export async function generateVoiceResponseStream(
   const ai = getClient();
   const systemInstruction = `
     You are MediAssist Voice AI — a real-time conversational medical assistant.
-    Speak in ${preferredLanguage} unless the user asks to switch.
+    Detect the user's language from their latest input and reply in that same language by default.
+    If the language is unclear, reply in English.
 
     START OF CONVERSATION (MANDATORY):
     - Keep this as a private 1-on-1 conversation with one patient only.
@@ -513,26 +515,14 @@ export async function generateVoiceResponseStream(
   return fullText.trim();
 }
 
-export async function generateSpeech(text: string, languageCode = "en-US"): Promise<string> {
+export async function generateSpeech(text: string): Promise<string> {
   const ai = getClient();
-  const languageNameMap: Record<string, string> = {
-    "en-US": "English",
-    "hi-IN": "Hindi",
-    "mr-IN": "Marathi",
-    "gu-IN": "Gujarati",
-    "pa-IN": "Punjabi",
-    "bn-IN": "Bengali",
-    "kn-IN": "Kannada",
-    "ta-IN": "Tamil",
-    "te-IN": "Telugu",
-  };
-  const targetLanguage = languageNameMap[languageCode] || languageCode;
 
   const response = await ai.models.generateContent({
     model: "gemini-3.1-flash-tts-preview",
     contents: [{
       parts: [{
-        text: `Speak this response in ${targetLanguage} with native pronunciation, smooth pacing, and a soft empathetic medical tone. Do not spell words letter by letter. Text: ${text}`
+        text: `Detect the language from this response text and speak it with native pronunciation, smooth pacing, and a soft empathetic medical tone. Do not spell words letter by letter. Text: ${text}`
       }]
     }],
     config: {
@@ -553,7 +543,7 @@ export async function generateSpeech(text: string, languageCode = "en-US"): Prom
 export async function transcribeVoiceInput(
   audioBase64: string,
   mimeType: string,
-  languageCode = "en-US"
+  languageCode?: string
 ): Promise<string> {
   if (!hasGeminiApiKey) {
     throw new Error("Voice transcription requires VITE_GEMINI_API_KEY.");
@@ -567,7 +557,7 @@ export async function transcribeVoiceInput(
         role: "user",
         parts: [
           {
-            text: `Transcribe this audio to plain text in ${languageCode}. Return only the transcript text without labels, notes, or markdown.`
+            text: `Transcribe this audio to plain text. Auto-detect the spoken language. If a language hint is provided (${languageCode || "none"}), use it only as a weak hint. Return only the transcript text without labels, notes, or markdown.`
           },
           {
             inlineData: {
