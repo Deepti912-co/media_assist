@@ -604,7 +604,7 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="hero-section-bg relative overflow-hidden rounded-3xl px-6 py-20 md:px-10"
+              className="hero-section-bg interactive-shell relative overflow-hidden rounded-3xl px-6 py-20 md:px-10"
             >
               <div className="hero-float hero-float-1" />
               <div className="hero-float hero-float-2" />
@@ -623,7 +623,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                     onClick={() => setView('input')}
-                    className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    className="warm-glow-button w-full sm:w-auto px-8 py-4 bg-brand-primary text-white rounded-2xl font-semibold shadow-lg shadow-teal-100 hover:bg-brand-dark hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                   >
                     Start Analysis <ArrowRight size={20} />
                   </button>
@@ -642,7 +642,7 @@ export default function App() {
                     { icon: Thermometer, title: "Symptom Logic", desc: "Map your experienced symptoms to potential health conditions." },
                     { icon: Pill, title: "Interaction Check", desc: "Flag potential side effects and drug-to-drug interactions." }
                   ].map((feature, idx) => (
-                    <div key={idx} className="p-6 rounded-2xl bg-white border border-border-base shadow-sm hover:shadow-md transition-all group">
+                    <div key={idx} className="soft-card p-6 rounded-2xl bg-white/95 border border-border-base shadow-sm hover:shadow-md transition-all group">
                       <div className="w-12 h-12 rounded-2xl bg-bg-base flex items-center justify-center text-text-muted mb-4 group-hover:bg-teal-50 group-hover:text-brand-primary transition-colors">
                         <feature.icon size={24} />
                       </div>
@@ -661,7 +661,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.02 }}
-              className="max-w-4xl mx-auto h-full flex flex-col"
+              className="interactive-shell max-w-4xl mx-auto h-full flex flex-col"
             >
               <div className="flex-1 flex flex-col items-center justify-center py-12">
                 <div className="relative mb-12">
@@ -680,7 +680,7 @@ export default function App() {
                     disabled={loading || isPlaying || !isSpeechSupported}
                     className={cn(
                       "relative w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-2xl",
-                      isListening ? "bg-red-500 scale-110" : "bg-brand-primary hover:scale-105",
+                      isListening ? "bg-red-500 scale-110" : "bg-brand-primary warm-glow-button hover:scale-105",
                       (loading || isPlaying) && "opacity-50 cursor-not-allowed"
                     )}
                   >
@@ -701,7 +701,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="w-full max-w-2xl bg-white rounded-3xl p-8 border border-border-base shadow-lg">
+                <div className="soft-card w-full max-w-2xl bg-white/95 rounded-3xl p-8 border border-border-base shadow-lg backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center text-brand-primary">
                       <Sparkles size={20} />
