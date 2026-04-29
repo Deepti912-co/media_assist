@@ -4,7 +4,7 @@
 @theme {
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   
-  --color-bg-base: #F0F4F8;
+  --color-bg-base: #F8F4EE;
   --color-brand-primary: #0D9488;
   --color-brand-dark: #0F766E;
   --color-text-bold: #0F172A;
@@ -20,7 +20,12 @@
 
 @layer base {
   body {
-    @apply bg-bg-base text-text-main font-sans;
+    @apply bg-bg-base text-text-main font-sans antialiased;
+    background-image:
+      radial-gradient(circle at 8% 10%, rgba(255, 214, 153, 0.25) 0%, transparent 38%),
+      radial-gradient(circle at 95% 0%, rgba(255, 240, 210, 0.45) 0%, transparent 38%),
+      linear-gradient(180deg, #fffdf9 0%, #f7f2ea 100%);
+    min-height: 100vh;
   }
 
   h1,
@@ -34,15 +39,31 @@
 }
 
 @layer components {
+  .interactive-shell {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .interactive-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1.5rem;
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.18));
+    pointer-events: none;
+    z-index: -1;
+  }
+
   .hero-section-bg {
-    background-color: #F0F4F4;
+    background-color: #FFF9F0;
     background-image:
-      radial-gradient(circle at top left, rgba(0, 191, 165, 0.10) 0%, transparent 42%),
-      radial-gradient(circle at bottom right, rgba(0, 137, 123, 0.08) 0%, transparent 46%),
-      radial-gradient(circle at center, rgba(0, 191, 165, 0.06) 0%, transparent 54%),
-      radial-gradient(circle, rgba(0, 137, 123, 0.07) 1px, transparent 1.5px);
+      radial-gradient(circle at top left, rgba(255, 209, 148, 0.30) 0%, transparent 46%),
+      radial-gradient(circle at bottom right, rgba(251, 234, 196, 0.22) 0%, transparent 46%),
+      radial-gradient(circle at center, rgba(13, 148, 136, 0.07) 0%, transparent 56%),
+      radial-gradient(circle, rgba(13, 148, 136, 0.07) 1px, transparent 1.5px);
     background-size: auto, auto, auto, 36px 36px;
     background-position: top left, bottom right, center, 0 0;
+    box-shadow: 0 15px 50px rgba(173, 127, 61, 0.12);
   }
 
   .hero-float {
@@ -59,7 +80,7 @@
     height: 18rem;
     top: 8%;
     left: -5%;
-    background: rgba(0, 191, 165, 0.25);
+    background: rgba(255, 190, 112, 0.34);
   }
 
   .hero-float-2 {
@@ -76,8 +97,23 @@
     height: 16rem;
     top: 38%;
     left: 42%;
-    background: rgba(13, 148, 136, 0.18);
+    background: rgba(255, 211, 148, 0.22);
     animation-delay: -1.2s;
+  }
+
+  .soft-card {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .soft-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 35px rgba(107, 76, 28, 0.12);
+    border-color: rgba(13, 148, 136, 0.28);
+  }
+
+  .warm-glow-button {
+    box-shadow: 0 10px 24px rgba(13, 148, 136, 0.22), 0 0 0 0 rgba(255, 184, 108, 0.42);
+    animation: pulseGlow 2.7s ease-in-out infinite;
   }
 }
 
@@ -88,4 +124,9 @@
   50% {
     transform: translateY(-20px);
   }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 10px 24px rgba(13, 148, 136, 0.22), 0 0 0 0 rgba(255, 184, 108, 0.42); }
+  50% { box-shadow: 0 14px 28px rgba(13, 148, 136, 0.22), 0 0 0 8px rgba(255, 184, 108, 0); }
 }
