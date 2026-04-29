@@ -101,6 +101,7 @@ export default function App() {
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
   const [voiceHistory, setVoiceHistory] = useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [hasStartedVoiceConsultation, setHasStartedVoiceConsultation] = useState(false);
+  const [voiceStage, setVoiceStage] = useState<'request_upload' | 'awaiting_upload' | 'analyzing_upload' | 'consultation'>('request_upload');
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<(typeof voiceLanguages)[number]['code']>('en-US');
   const [useRecorderMode, setUseRecorderMode] = useState(false);
@@ -238,41 +239,43 @@ export default function App() {
     const newHistory = [...voiceHistory, { role: 'user' as const, content: input }];
     setVoiceHistory(newHistory);
     setLoading(true);
-    
-    try {
-      // 1. Classify Intent
-      const classification = await classifyIntent(input);
-      console.log('Intent Classification:', classification);
 
+    try {
       let responseText = '';
 
-      if (classification.intent === 'EMERGENCY') {
-        responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
+      if (voiceStage === 'request_upload' || voiceStage === 'awaiting_upload') {
+        responseText = 'Please upload your files and prescription using the upload option below. Once uploaded, I will analyze them and explain everything respectfully.';
+        setVoiceStage('awaiting_upload');
         setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
       } else {
-        const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
-        // 2. Stream spoken response from Gemini
-        setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
-        responseText = await generateVoiceResponseStream(
-          input,
-          profile,
-          analysis,
-          newHistory,
-          (partialText) => {
-            setVoiceHistory((prev) => {
-              if (prev.length === 0) {
-                return prev;
-              }
-              const updated = [...prev];
-              const lastEntry = updated[updated.length - 1];
-              if (lastEntry.role === 'model') {
-                updated[updated.length - 1] = { role: 'model', content: partialText };
-              }
-              return updated;
-            });
-          },
-          selectedLanguage
-        );
+        const classification = await classifyIntent(input);
+        if (classification.intent === 'EMERGENCY') {
+          responseText = "This sounds like a medical emergency. Please call 112 right now or ask someone nearby to help you. Do not wait.";
+          setVoiceHistory([...newHistory, { role: 'model' as const, content: responseText }]);
+        } else {
+          const selectedLanguage = voiceLanguages.find((language) => language.code === selectedLanguageCode)?.label || 'English';
+          setVoiceHistory((prev) => [...prev, { role: 'model' as const, content: '' }]);
+          responseText = await generateVoiceResponseStream(
+            input,
+            profile,
+            analysis,
+            newHistory,
+            (partialText) => {
+              setVoiceHistory((prev) => {
+                if (prev.length === 0) {
+                  return prev;
+                }
+                const updated = [...prev];
+                const lastEntry = updated[updated.length - 1];
+                if (lastEntry.role === 'model') {
+                  updated[updated.length - 1] = { role: 'model', content: partialText };
+                }
+                return updated;
+              });
+            },
+            selectedLanguage
+          );
+        }
       }
 
       await speak(responseText);
@@ -290,9 +293,10 @@ export default function App() {
       return;
     }
 
-    const greeting = `Hi, I'm your AI health assistant, and we'll begin with voice support.\n\nBefore we continue, do you have any prescription or medical report to share?\nIf yes, please read out key values or upload them and I will explain them.\nIf not, you can tell me any health problem you're facing, and I'll guide you step by step.`;
+    const greeting = `Please upload your files and prescription.`;
 
     setVoiceHistory([{ role: 'model', content: greeting }]);
+    setVoiceStage('awaiting_upload');
     setHasStartedVoiceConsultation(true);
     void speak(greeting);
   }, [view, hasStartedVoiceConsultation, selectedLanguageCode]);
@@ -467,6 +471,12 @@ export default function App() {
       const fileDescriptor = `[UPLOADED FILE]\nName: ${file.name}\nType: ${file.type || 'Unknown'}\nSize: ${Math.round(file.size / 1024)} KB\n\nNote: OCR extraction is not enabled yet for this file type. Please paste key report values below for best results.`;
       setReportText(fileDescriptor);
       setUploadMessage(`Attached ${file.name}`);
+      if (view === 'voice') {
+        setVoiceStage('analyzing_upload');
+        const analyzingMessage = 'Files received. I am now analyzing your reports and prescription. Please wait.';
+        setVoiceHistory((prev) => [...prev, { role: 'model', content: analyzingMessage }]);
+        void speak(analyzingMessage);
+      }
     } catch (error) {
       console.error(error);
       setUploadMessage(`Could not read "${file.name}". Please try another file.`);
@@ -491,6 +501,12 @@ export default function App() {
       const result = await analyzeMedicalData(reportText, symptoms, profile);
       setAnalysis(result);
       setView('analysis');
+      if (view === 'voice') {
+        setVoiceStage('consultation');
+        const consultMessage = 'Analysis is complete. I am ready to discuss your reports and prescription respectfully. You can ask me anything now.';
+        setVoiceHistory((prev) => [...prev, { role: 'model', content: consultMessage }]);
+        void speak(consultMessage);
+      }
     } catch (error) {
       console.error(error);
       alert('Analysis failed. Please try again.');
@@ -661,9 +677,9 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.02 }}
-              className="interactive-shell max-w-4xl mx-auto h-full flex flex-col"
+              className="voice-orb-shell max-w-5xl mx-auto h-full flex flex-col"
             >
-              <div className="flex-1 flex flex-col items-center justify-center py-12">
+              <div className="flex-1 flex flex-col items-center justify-center py-8">
                 <div className="relative mb-12">
                   <AnimatePresence>
                     {isListening && (
@@ -679,7 +695,7 @@ export default function App() {
                     onClick={toggleListening}
                     disabled={loading || isPlaying || !isSpeechSupported}
                     className={cn(
-                      "relative w-32 h-32 rounded-full flex items-center justify-center transition-all shadow-2xl",
+                      "relative w-40 h-40 voice-orb rounded-full flex items-center justify-center transition-all shadow-2xl",
                       isListening ? "bg-red-500 scale-110" : "bg-brand-primary warm-glow-button hover:scale-105",
                       (loading || isPlaying) && "opacity-50 cursor-not-allowed"
                     )}
@@ -690,13 +706,13 @@ export default function App() {
                   {loading && (
                     <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 text-brand-primary font-bold whitespace-nowrap">
                       <Loader2 size={24} className="animate-spin" />
-                      <span>MediAssist is thinking...</span>
+                      <span>Analyzing...</span>
                     </div>
                   )}
                   {isPlaying && (
                     <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2 text-brand-primary font-bold whitespace-nowrap">
                       <Volume2 size={24} className="animate-pulse" />
-                      <span>MediAssist is speaking...</span>
+                      <span>Responding...</span>
                     </div>
                   )}
                 </div>
